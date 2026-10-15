@@ -1,0 +1,15 @@
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+.next/
+
+# Debug logs
+npm-debug.log*
