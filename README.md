@@ -1,91 +1,172 @@
-# Buzzer Live — React + Supabase + Vercel
+# Buzzer Live
 
-Aplicación web responsive con dos modos: participante y administrador. Incluye botón rojo con sonido generado localmente, partidas por código, rondas administradas, orden de pulsación asignado en PostgreSQL y actualizaciones por Supabase Realtime Broadcast (con polling de respaldo cada 5 segundos).
+Aplicación web interactiva de trivia que permite a los participantes ingresar a una sala, competir por responder primero y consultar el ranking de respuestas. Diseñada para dinámicas académicas, eventos y juegos grupales en tiempo real.
 
-> **Importante:** este repositorio es una primera versión funcional de referencia. Para usarlo en producción debes conectar tu proyecto Supabase, ejecutar el SQL y crear/autorizar la cuenta administradora. No hay credenciales reales incluidas.
+**Aplicación en producción:** https://buzzer-trivia-2026.vercel.app/
 
-## Requisitos
+## Características principales
 
-- Node.js 20 o superior recomendado
-- Cuenta de Supabase
-- Cuenta de Vercel (opcional para publicar)
+- **Salas de juego:** permite crear o ingresar a salas mediante un código.
+- **Participantes independientes:** cada participante tiene su propia identidad dentro de la sala.
+- **Sistema de buzzer:** los participantes pueden presionar un botón para registrar su respuesta.
+- **Control de respuestas:** registra el orden en que los participantes presionan el buzzer.
+- **Ranking:** permite consultar las posiciones registradas durante las rondas.
+- **Persistencia de datos:** utiliza Supabase para almacenar la información del juego.
+- **Interfaz web:** desarrollada con React y Vite, con estilos personalizados.
+- **Despliegue en la nube:** publicada mediante Vercel.
 
-## 1. Instalar y ejecutar
+## Tecnologías utilizadas
+
+| Tecnología | Uso |
+|---|---|
+| React | Construcción de la interfaz de usuario |
+| TypeScript | Tipado estático y organización del código |
+| Vite | Herramienta de desarrollo y compilación |
+| Supabase | Base de datos y comunicación con el backend |
+| CSS | Estilos y diseño de la interfaz |
+| Vercel | Despliegue de la aplicación |
+| Git y GitHub | Control de versiones y alojamiento del código |
+
+## Requisitos previos
+
+Antes de ejecutar el proyecto localmente, asegúrate de tener instalado:
+
+- [Node.js](https://nodejs.org/) (versión LTS recomendada).
+- npm, incluido con Node.js.
+- Una cuenta de [Supabase](https://supabase.com/) con el proyecto y la base de datos configurados.
+
+## Instalación
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/ismc0/buzzer-trivia-2026.git
+cd buzzer-trivia-2026
+```
+
+### 2. Instalar dependencias
 
 ```bash
 npm install
-cp .env.example .env
+```
+
+### 3. Configurar las variables de entorno
+
+Crea un archivo `.env` en la raíz del proyecto, al mismo nivel que `package.json`.
+
+Agrega las credenciales de tu proyecto Supabase:
+
+```env
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=tu_clave_publicable
+```
+
+Reemplaza los valores de ejemplo por los correspondientes a tu proyecto.
+
+**Importante:** no subas el archivo `.env` a GitHub. Las variables con prefijo `VITE_` se incluyen en el código enviado al navegador, por lo que solo deben contener valores aptos para uso público. Nunca incluyas claves `service_role`, contraseñas ni otros secretos del backend.
+
+### 4. Ejecutar en modo desarrollo
+
+```bash
 npm run dev
 ```
 
-En Windows PowerShell, si `cp` no funciona:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Edita `.env` con los datos de **Supabase Project Settings → API**:
-
-```env
-VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
-VITE_SUPABASE_ANON_KEY=TU_CLAVE_PUBLICABLE_O_ANON
-```
-
-Usa únicamente la clave publicable/anon en el navegador. **Nunca** incluyas `service_role` en variables `VITE_*` ni en el frontend.
-
-## 2. Configurar la base de datos
-
-1. Crea un proyecto en Supabase.
-2. Abre **SQL Editor → New query**.
-3. Copia y ejecuta todo el archivo `supabase/schema.sql`.
-4. En Supabase, abre **Authentication → Users → Add user** y crea el usuario administrador con correo y contraseña. Desactiva el registro público de usuarios si no lo necesitas.
-5. Copia el UUID del usuario recién creado y ejecuta en SQL Editor:
-
-```sql
-insert into public.admin_users(user_id)
-values ('PEGA-AQUI-EL-UUID-DEL-USUARIO-ADMIN');
-```
-
-La cuenta puede iniciar sesión, pero solo los usuarios presentes en `public.admin_users` tienen permisos administrativos. No es suficiente con crear un usuario en Auth.
-
-## 3. Probar el flujo
-
-1. Ejecuta `npm run dev` y abre la URL local.
-2. Entra a **Acceso administrador** e inicia sesión.
-3. Crea una partida y copia el código generado.
-4. Abre otra ventana, otro navegador o un celular y entra a **Entrar a una partida**.
-5. Introduce el código y un nombre. Repite con varios participantes.
-6. Desde el administrador, inicia la ronda. Los participantes podrán pulsar el botón.
-7. Bloquea la ronda para impedir nuevas pulsaciones o inicia una nueva ronda cuando corresponda.
-
-## 4. Publicar en Vercel
-
-1. Sube esta carpeta a un repositorio Git (GitHub, GitLab o Bitbucket).
-2. En Vercel selecciona **Add New → Project** e importa el repositorio.
-3. Añade `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Environment Variables.
-4. Despliega. Vercel detectará Vite automáticamente; el comando de build es `npm run build` y el directorio de salida `dist`.
-5. Para cambios posteriores, haz push al repositorio y Vercel volverá a desplegar.
-
-## Decisiones técnicas y límites
-
-- **Orden de pulsación:** `submit_buzz` bloquea la fila de la ronda activa (`FOR UPDATE`) y calcula el siguiente puesto dentro de esa sección crítica. PostgreSQL impone además `UNIQUE(round_id, position)` y `UNIQUE(round_id, participant_id)`. El servidor determina el orden de solicitudes aceptadas; no puede medir de forma perfecta el instante físico del toque en redes con latencias distintas.
-- **Autenticación de participantes:** los participantes usan un UUID y un token aleatorio generado en el navegador. La base de datos guarda únicamente el hash SHA-256 del token. No se guarda en localStorage en esta primera versión; si se recarga la página, vuelve a entrar con un nombre distinto o limpia el estado, deberá volver a ingresar. El nombre debe ser único por sala.
-- **Sonido:** Web Audio API genera el sonido en el dispositivo que presiona. No se emite audio a los demás usuarios. Algunos navegadores requieren interacción del usuario para permitir audio; aquí el sonido se invoca dentro del clic.
-- **Tiempo real:** triggers de PostgreSQL emiten eventos Broadcast al tema público `room:<CÓDIGO>`. El código de partida funciona como identificador compartido, no como mecanismo fuerte de privacidad. Quien conozca el código puede consultar el estado y clasificación. No uses datos personales sensibles.
-- **Anti-trampas:** es adecuado para juegos casuales. El nombre de usuario no verifica la identidad y el orden depende de las solicitudes que recibe y serializa el servidor. Para concursos de alto impacto harían falta controles adicionales.
-- **Nueva ronda:** conserva el historial en la base de datos, pero el tablero muestra las pulsaciones de la ronda más reciente.
-
-## Estructura
+Vite mostrará una dirección local, normalmente:
 
 ```text
-buzzer-web/
-├── src/
-│   ├── lib/supabase.ts
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── styles.css
-├── supabase/schema.sql
-├── .env.example
-├── index.html
-└── README.md
+http://localhost:5173/
 ```
+
+Abre esa dirección en el navegador para utilizar la aplicación.
+
+## Configuración de Supabase
+
+Buzzer Live utiliza Supabase como servicio de backend para gestionar la información de las salas y las interacciones de los participantes.
+
+Para que la aplicación funcione correctamente, el proyecto de Supabase debe contar con:
+
+- La tabla de salas (`rooms`).
+- La tabla de participantes (`participants`).
+- La tabla de rondas (`rounds`).
+- La tabla de respuestas del buzzer (`buzzes`).
+- Las relaciones entre las tablas y las restricciones correspondientes.
+- Las funciones de base de datos utilizadas por la aplicación, incluyendo `submit_buzz` y `get_room_state`.
+
+La estructura de la base de datos y las funciones deben estar configuradas antes de utilizar una instalación nueva. Este README no reemplaza el script SQL ni las migraciones de la base de datos.
+
+## Compilación para producción
+
+Para generar la versión optimizada de la aplicación:
+
+```bash
+npm run build
+```
+
+Para ejecutar una vista previa local de la compilación:
+
+```bash
+npm run preview
+```
+
+Si la compilación termina correctamente, los archivos de producción se generan en la carpeta `dist/`.
+
+## Despliegue en Vercel
+
+El proyecto puede desplegarse conectando el repositorio de GitHub a Vercel.
+
+1. Ingresa a [Vercel](https://vercel.com/).
+2. Importa el repositorio `ismc0/buzzer-trivia-2026`.
+3. Configura las variables de entorno `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`.
+4. Verifica que el comando de compilación sea `npm run build`.
+5. Verifica que el directorio de salida sea `dist`.
+6. Despliega la aplicación.
+
+Cuando se publican nuevos cambios en la rama configurada, Vercel puede generar un nuevo despliegue automáticamente.
+
+**URL de producción:** https://buzzer-trivia-2026.vercel.app/
+
+## Estructura general del proyecto
+
+```text
+buzzer-trivia-2026/
+├── public/
+├── src/
+│   ├── assets/
+│   │   └── ding.m4a
+│   ├── App.tsx
+│   └── styles.css
+├── .env.example
+├── .gitignore
+├── package.json
+├── package-lock.json
+├── index.html
+├── tsconfig.json
+└── vite.config.ts
+```
+
+La estructura puede variar según los archivos adicionales presentes en el repositorio.
+
+## Control de versiones
+
+Para guardar y publicar cambios:
+
+```bash
+git add .
+git commit -m "Describe your changes"
+git push origin main
+```
+
+Si el repositorio está conectado a Vercel, el envío de cambios a la rama de producción puede activar un nuevo despliegue.
+
+## Seguridad y buenas prácticas
+
+- Mantén las credenciales locales en `.env`.
+- Utiliza `.env.example` únicamente como plantilla, sin credenciales reales.
+- No publiques claves privadas ni secretos administrativos.
+- Configura las políticas de seguridad de Supabase y los permisos de acceso a la base de datos.
+- Valida las operaciones sensibles en el backend, no únicamente en la interfaz.
+- Prueba los cambios localmente antes de publicarlos.
+
+## Estado del proyecto
+
+Buzzer Live cuenta con una versión desplegada públicamente. Su funcionamiento depende de la disponibilidad de Vercel, Supabase y de la configuración correcta de las variables de entorno y la base de datos.
